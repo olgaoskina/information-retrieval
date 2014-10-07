@@ -4,10 +4,9 @@ import olga.oskina.index.InvertedIndex;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 import org.apache.lucene.morphology.russian.RussianAnalyzer;
-
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -26,8 +25,8 @@ public class Searcher {
 
     private InvertedIndex invertedIndex;
 
-    public Searcher(Path inputFile) {
-        invertedIndex = new InvertedIndex(inputFile.toFile());
+    public Searcher(File inputFile) {
+        invertedIndex = new InvertedIndex(inputFile);
         invertedIndex.read();
     }
 

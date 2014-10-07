@@ -4,8 +4,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-
-import java.nio.file.Paths;
+import java.io.File;
 
 
 /**
@@ -38,8 +37,8 @@ public class RunIndexer {
         Logger logger = Logger.getLogger(this.getClass());
         logger.info("Start working");
         Indexer indexer = new Indexer(
-                Paths.get(folder).toAbsolutePath(),
-                Paths.get(fileWithIndexes).toAbsolutePath(),
+                new File(folder),
+                new File(fileWithIndexes),
                 logger
         );
         indexer.work();

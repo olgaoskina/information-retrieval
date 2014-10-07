@@ -2,8 +2,7 @@ package olga.oskina.searcher;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-
-import java.nio.file.Paths;
+import java.io.File;
 import java.util.Scanner;
 
 /**
@@ -31,7 +30,7 @@ public class RunSearcher {
     public void work() {
         Scanner scanner = new Scanner(System.in);
         Searcher searcher;
-        searcher = new Searcher(Paths.get(fileWithIndexes));
+        searcher = new Searcher(new File(fileWithIndexes));
         while (scanner.hasNext()) {
             String request = scanner.nextLine();
             System.out.println("\t" + searcher.find(request));

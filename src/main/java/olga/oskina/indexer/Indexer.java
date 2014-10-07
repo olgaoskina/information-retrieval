@@ -9,7 +9,6 @@ import org.apache.lucene.morphology.russian.RussianAnalyzer;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -22,10 +21,9 @@ public class Indexer {
     private InvertedIndex invertedIndex;
     private File folder;
 
-    public Indexer(Path pathToFolder, Path pathToOutputFile, Logger logger) {
+    public Indexer(File folder, File outputFile, Logger logger) {
         this.logger = logger;
-        folder = pathToFolder.toFile();
-        File outputFile = pathToOutputFile.toFile();
+        this.folder = folder;
 
         if (!(folder.exists() && folder.isDirectory())) {
             throw new IllegalArgumentException("Directory doesn't exist");
@@ -50,8 +48,8 @@ public class Indexer {
                     long time = System.currentTimeMillis();
                     tokenizeFile(file, indexOfFile);
                     long workingTime = System.currentTimeMillis() - time;
-                    logger.info("[TIME]: " + convertToValidTime(workingTime) + " [FILE]: " + folder.getPath());
-                    invertedIndex.appendFileWithIndex(file.getAbsolutePath(), indexOfFile);
+                    logger.info("[TIME]: " + convertToValidTime(workingTime) + " [FILE]: " + file.getPath());
+                    invertedIndex.appendFileWithIndex(file.getPath(), indexOfFile);
                 }
             }
         }
