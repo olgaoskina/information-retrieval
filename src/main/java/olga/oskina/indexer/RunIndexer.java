@@ -20,7 +20,7 @@ public class RunIndexer {
     @Parameter(names = {"-indexes", "--i"}, required = true)
     String fileWithIndexes;
 
-    @Parameter(names = {"-help", "--h"}, required = false)
+    @Parameter(names = {"-help", "--h"}, help = true)
     Boolean help = false;
 
     public static void main(String[] args) {
