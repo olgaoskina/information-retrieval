@@ -1,16 +1,14 @@
 package olga.oskina.searcher;
 
-import olga.oskina.index.InvertedIndex;
+import olga.oskina.index.CoordinateIndex;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 import org.apache.lucene.morphology.russian.RussianAnalyzer;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,26 +17,21 @@ import java.util.regex.Pattern;
  * 07 October 2014.
  */
 public class Searcher {
-    private enum Kind {
-        OR, AND
-    }
 
-    private InvertedIndex invertedIndex;
+    private CoordinateIndex coordinateIndex;
 
     public Searcher(File inputFile) {
-        invertedIndex = new InvertedIndex(inputFile);
-        invertedIndex.read();
+        coordinateIndex = new CoordinateIndex(inputFile);
+        coordinateIndex.read();
     }
 
     public String find(String request) {
-        Kind typeOfRequest = typeOfRequest(request);
+        boolean typeOfRequest = checkFormat(request);
         String result;
-        if (typeOfRequest == null) {
+        if (!typeOfRequest) {
             result = "incorrect query";
-        } else if (typeOfRequest == Kind.AND) {
-            result = convertToValidFormat(changeKeyToFileName(searchAnd(request)));
         } else {
-            result = convertToValidFormat(changeKeyToFileName(searchOR(request)));
+            result = convertToValidFormat(changeKeyToFileName(search(request)));
         }
         return result;
     }
@@ -65,32 +58,31 @@ public class Searcher {
         return result;
     }
 
-    private List<String> changeKeyToFileName(List<Integer> keys) {
-        List<String> fileNames = new ArrayList<String>();
-        for (Integer key : keys) {
-            fileNames.add(invertedIndex.getFileNameByIndex(key));
+    private List<String> changeKeyToFileName(List<Pair<Integer, Integer>> keysAndPos) {
+        Set<String> fileNames = new HashSet<String>();
+        for (Pair<Integer, Integer> keyAndPos : keysAndPos) {
+            fileNames.add(coordinateIndex.getFileNameByIndex(keyAndPos.getLeft()));
         }
-        return fileNames;
+        return new ArrayList<String>(fileNames);
     }
 
-    private List<Integer> searchAnd(String request) {
-        String[] terms = request.replaceAll("AND ", "").split(" ");
+    private List<Pair<Integer, Integer>> search(String request) {
+        String[] terms = request.trim().replaceAll(" +", " ").split(" ");
         RussianAnalyzer russianAnalyzer = null;
         TokenStream tokenStream = null;
-        List<Integer> result = null;
+        List<Pair<Integer, Integer>> result = null;
         try {
             russianAnalyzer = new RussianAnalyzer();
-            for (int i = 0; i < terms.length; i++) {
+			//	handle only the even positions, because there are no terms in odd positions
+            for (int i = 0; i < terms.length; i += 2) {
                 tokenStream = russianAnalyzer.tokenStream(null, new StringReader(terms[i]));
                 tokenStream.incrementToken();
                 terms[i] = tokenStream.getAttribute(TermAttribute.class).term();
             }
-
-            result = invertedIndex.getFilesIndexesByTerm(terms[0]);
-
-            for (int i = 1; i < terms.length; i++) {
-                List<Integer> filesIndexesByTerm = invertedIndex.getFilesIndexesByTerm(terms[i]);
-                result = searchAnd(result, filesIndexesByTerm);
+			result = coordinateIndex.getFilesIndexesByTerm(terms[0]);
+			for (int i = 2; i < terms.length; i += 2) {
+                List<Pair<Integer, Integer>> filesIndexesByTerm = coordinateIndex.getFilesIndexesByTerm(terms[i]);
+				result = search(result, filesIndexesByTerm, terms[i - 1].replace("/", ""));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -109,72 +101,33 @@ public class Searcher {
         return result;
     }
 
-    private List<Integer> searchAnd(List<Integer> resultIndexes, List<Integer> newIndexes) {
-        List<Integer> answer = new ArrayList<Integer>();
-        int p1 = 0;
-        int p2 = 0;
+    private List<Pair<Integer, Integer>> search(List<Pair<Integer, Integer>> result, List<Pair<Integer, Integer>> secondIndexes, String term) {
+        List<Pair<Integer, Integer>> answer = new ArrayList<Pair<Integer, Integer>>();
+		int distance = Integer.valueOf(term);
+		boolean useAbs = term.matches("^[0-9]+$");
+		for (Pair<Integer, Integer> resultPair : result) {
+			for (Pair<Integer, Integer> secondPair : secondIndexes) {
+				if (resultPair.getLeft().equals(secondPair.getLeft())) {
+					int distanceBetweenPairs;
+					if (useAbs) {
+						distanceBetweenPairs = Math.abs(resultPair.getRight() - secondPair.getRight());
+					} else {
+						distanceBetweenPairs = secondPair.getRight() - resultPair.getRight();
+					}
 
-        while (p1 < resultIndexes.size() && p2 < newIndexes.size()) {
-            int resultNextInteger = resultIndexes.get(p1);
-            int newNextInteger = newIndexes.get(p2);
-            if (resultNextInteger == newNextInteger) {
-                answer.add(resultNextInteger);
-                p1++;
-                p2++;
-            } else if (resultNextInteger < newNextInteger) {
-                p1++;
-            } else {
-                p2++;
-            }
-        }
-        return answer;
+					if (Math.abs(distanceBetweenPairs) <= Math.abs(distance)
+							&& Integer.signum(distance) == Integer.signum(distanceBetweenPairs)) {
+						answer.add(secondPair);
+					}
+				}
+			}
+		}
+		return answer;
     }
 
-    private List<Integer> searchOR(String request) {
-        List<Integer> result = new ArrayList<Integer>();
-        RussianAnalyzer russianAnalyzer = null;
-        TokenStream tokenStream = null;
-        String[] terms = request.replaceAll("OR ", "").split(" ");
-        try {
-            russianAnalyzer = new RussianAnalyzer();
-            for (int i = 0; i < terms.length; i++) {
-                tokenStream = russianAnalyzer.tokenStream(null, new StringReader(terms[i]));
-                tokenStream.incrementToken();
-                terms[i] = tokenStream.getAttribute(TermAttribute.class).term();
-            }
-
-            Set<Integer> set = new HashSet<Integer>();
-            for (String term : terms) {
-                set.addAll(invertedIndex.getFilesIndexesByTerm(term));
-            }
-            result.addAll(set);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (russianAnalyzer != null) {
-                    russianAnalyzer.close();
-                }
-                if (tokenStream != null) {
-                    tokenStream.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return result;
-    }
-
-    private Kind typeOfRequest(String request) {
-        Pattern patternOR = Pattern.compile("^([A-Za-zА-Яа-я0-9]+ OR )*[A-Za-zА-Яа-я0-9]+$");
-        Matcher matcherOR = patternOR.matcher(request);
-        Pattern patternAND = Pattern.compile("^([A-Za-zА-Яа-я0-9]+ AND )+[A-Za-zА-Яа-я0-9]+$");
-        Matcher matcherAND = patternAND.matcher(request);
-        if (matcherAND.find()) {
-            return Kind.AND;
-        } else if (matcherOR.find()) {
-            return Kind.OR;
-        }
-        return null;
+    private boolean checkFormat(String request) {
+        Pattern pattern = Pattern.compile("^([A-Za-zА-Яа-я0-9]+ /[+-]?[0-9]+ )*[A-Za-zА-Яа-я0-9]+$");
+		Matcher matcher = pattern.matcher(request);
+		return matcher.find();
     }
 }

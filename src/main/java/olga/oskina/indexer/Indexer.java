@@ -1,6 +1,7 @@
 package olga.oskina.indexer;
 
-import olga.oskina.index.InvertedIndex;
+import olga.oskina.index.CoordinateIndex;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.TermAttribute;
@@ -18,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 public class Indexer {
     private Logger logger;
     private int indexOfFile = 0;
-    private InvertedIndex invertedIndex;
+    private CoordinateIndex coordinateIndex;
     private File folder;
 
     public Indexer(File folder, File outputFile, Logger logger) {
@@ -28,13 +29,13 @@ public class Indexer {
         if (!(folder.exists() && folder.isDirectory())) {
             throw new IllegalArgumentException("Directory doesn't exist");
         }
-        invertedIndex = new InvertedIndex(outputFile);
+        coordinateIndex = new CoordinateIndex(outputFile);
     }
 
     public void work() {
         readAndTokenizeFiles(folder);
-        invertedIndex.write();
-        invertedIndex.closeReaderAndWriter();
+        coordinateIndex.write();
+        coordinateIndex.closeReaderAndWriter();
     }
 
     private void readAndTokenizeFiles(File folder) {
@@ -49,7 +50,7 @@ public class Indexer {
                     tokenizeFile(file, indexOfFile);
                     long workingTime = System.currentTimeMillis() - time;
                     logger.info("[TIME]: " + convertToValidTime(workingTime) + " [FILE]: " + file.getPath());
-                    invertedIndex.appendFileWithIndex(file.getPath(), indexOfFile);
+                    coordinateIndex.appendFileWithIndex(file.getPath(), indexOfFile);
                 }
             }
         }
@@ -71,6 +72,7 @@ public class Indexer {
     private void tokenizeFile(File file, int fileIndex) {
         RussianAnalyzer russian = null;
         TokenStream tokenStream = null;
+		int position = 0;
         try {
             russian = new RussianAnalyzer();
             tokenStream = russian.tokenStream(
@@ -78,8 +80,9 @@ public class Indexer {
                     new FileReader(file)
             );
             while (tokenStream.incrementToken()) {
+				position++;
                 String term = tokenStream.getAttribute(TermAttribute.class).term();
-                invertedIndex.appendTermWithIndex(term, fileIndex);
+                coordinateIndex.appendTermWithIndex(term, Pair.of(fileIndex, position));
             }
         } catch (IOException e) {
             e.printStackTrace();
