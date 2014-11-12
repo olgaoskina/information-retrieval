@@ -1,6 +1,11 @@
 package olga.oskina.metrics;
 
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.math.NumberUtils;
+
+import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Created by olgaoskina
@@ -56,6 +61,7 @@ public class Metrics {
         int[] sortedScores = new int[scores.length];
         System.arraycopy(scores, 0, sortedScores, 0, scores.length);
         Arrays.sort(sortedScores);
+		ArrayUtils.reverse(sortedScores);
 
         double dcg = calcDCG(scores);
         double idcg = calcDCG(sortedScores);
@@ -72,9 +78,12 @@ public class Metrics {
     protected static double calcPFound(int[] scores) {
         double ans = 0;
         double lastPLook = 1;
+		double threshold = NumberUtils.max(scores) * 0.90;
+
         for (int a : scores) {
-            ans += lastPLook * a;
-            lastPLook = lastPLook * (1 - a) * (1 - P_BREAK);
+			double pRel = a >= threshold ? 0.40 : 0.00;
+            ans += lastPLook * pRel;
+            lastPLook = lastPLook * (1 - pRel) * (1 - P_BREAK);
         }
         return ans;
     }
