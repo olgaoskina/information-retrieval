@@ -87,7 +87,7 @@ public class Metrics {
 		double threshold = NumberUtils.max(scores) * 0.90;
 
         for (int a : scores) {
-			double pRel = a >= threshold ? 0.40 : 0.00;
+        	double pRel = a >= threshold ? 0.40 : 0.00;
             ans += lastPLook * pRel;
             lastPLook = lastPLook * (1 - pRel) * (1 - P_BREAK);
         }
