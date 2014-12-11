@@ -1,11 +1,8 @@
 package olga.oskina.metrics;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
-import java.util.Collections;
 
 /**
  * Created by olgaoskina
@@ -61,12 +58,21 @@ public class Metrics {
         int[] sortedScores = new int[scores.length];
         System.arraycopy(scores, 0, sortedScores, 0, scores.length);
         Arrays.sort(sortedScores);
-		ArrayUtils.reverse(sortedScores);
+        reverse(sortedScores);
 
         double dcg = calcDCG(scores);
         double idcg = calcDCG(sortedScores);
 
         return dcg / idcg;
+    }
+
+    private static void reverse(int[] ar) {
+        int len = ar.length;
+        for (int i = 0; i < len / 2; i++) {
+            int temp = ar[i];
+            ar[i] = ar[len - 1 - i];
+            ar[len - 1 - i] = temp;
+        }
     }
 
     // PFound

@@ -61,6 +61,25 @@
                             </transformers>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>metrics</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>metrics</finalName>
+                            <outputDirectory>${basedir}</outputDirectory>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+                                        <Main-Class>olga.oskina.metrics.MetricsRunner</Main-Class>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
